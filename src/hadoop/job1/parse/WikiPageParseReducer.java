@@ -6,6 +6,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 
 public class WikiPageParseReducer extends Reducer<Text, Text, Text, Text> {
@@ -14,16 +17,24 @@ public class WikiPageParseReducer extends Reducer<Text, Text, Text, Text> {
     public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
         Configuration config = context.getConfiguration();
         Integer corpusSize = Integer.parseInt(config.get("size"));
-        Integer pageRank = 1/corpusSize;
+        Double pageRank = 1.0 /corpusSize;
     	String initialPageRank = pageRank+"\t";
         String rankWithOutgoingLinks = initialPageRank;
+        Set<String> linkSet = new HashSet<String>();
+        
+        for(Text val: values){
+        	// remove duplication in outgoing links
+        	linkSet.add(val.toString());
+        }
 
         boolean first = true;
-
-        for (Text value : values) {
+        Iterator<String> setIterator = linkSet.iterator();
+        while (setIterator.hasNext()) {
+        	
+        	String value = setIterator.next();
             if(!first) rankWithOutgoingLinks += ",";
 
-            rankWithOutgoingLinks += value.toString();
+            rankWithOutgoingLinks += value;
             first = false;
         }
 

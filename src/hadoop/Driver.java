@@ -10,9 +10,14 @@ import hadoop.job3.rank.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Partitioner;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
@@ -41,12 +46,12 @@ public class Driver extends Configured implements Tool {
     	calculateCorpusSize(args[0], "wiki-corpus-size");
     	String corpusSize = readFile();
     	
-        boolean isCompleted = runXmlParsing(args[0], args[1], corpusSize);
+        boolean isCompleted = runWikiPageParsing(args[0], args[1], corpusSize);
         if (!isCompleted) return 1;
 
         String lastResultPath = null;
 
-        for (int runs = 0; runs < 10; runs++) {
+        for (int runs = 0; runs < 16; runs++) {
             String inPath = "wiki/ranking/iter" + nf.format(runs);
             lastResultPath = "wiki/ranking/iter" + nf.format(runs + 1);
 
@@ -54,9 +59,10 @@ public class Driver extends Configured implements Tool {
 
             if (!isCompleted) return 1;
         }
-
-        isCompleted = runRankOrdering(lastResultPath, "wiki/result");
-
+        
+        isCompleted = sortPageRank(lastResultPath, "wiki/result");
+        
+        System.out.println("Is completed: "+isCompleted);
         if (!isCompleted) return 1;
         return 0;
     }
@@ -88,30 +94,30 @@ public class Driver extends Configured implements Tool {
     }
     
     
-    public boolean runXmlParsing(String inputPath, String outputPath, String size) throws IOException, ClassNotFoundException, InterruptedException {
+    public boolean runWikiPageParsing(String inputPath, String outputPath, String size) throws IOException, ClassNotFoundException, InterruptedException {
         Configuration conf = new Configuration();
         conf.set(hadoop.job1.parse.XmlInputFormat.START_TAG_KEY, "<page>");
         conf.set(hadoop.job1.parse.XmlInputFormat.END_TAG_KEY, "</page>");
         conf.set("size", size);
         
-        Job xmlHakker = Job.getInstance(conf, "xml-parser");
-        xmlHakker.setJarByClass(Driver.class);
+        Job xmlParser = Job.getInstance(conf, "xml-parser");
+        xmlParser.setJarByClass(Driver.class);
 
         // Input / Mapper
-        FileInputFormat.addInputPath(xmlHakker, new Path(inputPath));
-        xmlHakker.setInputFormatClass(XmlInputFormat.class);
-        xmlHakker.setMapperClass(WikiPageParseMapper.class);
-        xmlHakker.setMapOutputKeyClass(Text.class);
+        FileInputFormat.addInputPath(xmlParser, new Path(inputPath));
+        xmlParser.setInputFormatClass(XmlInputFormat.class);
+        xmlParser.setMapperClass(WikiPageParseMapper.class);
+        xmlParser.setMapOutputKeyClass(Text.class);
 
         // Output / Reducer
-        FileOutputFormat.setOutputPath(xmlHakker, new Path(outputPath));
-        xmlHakker.setOutputFormatClass(TextOutputFormat.class);
+        FileOutputFormat.setOutputPath(xmlParser, new Path(outputPath));
+        xmlParser.setOutputFormatClass(TextOutputFormat.class);
 
-        xmlHakker.setOutputKeyClass(Text.class);
-        xmlHakker.setOutputValueClass(Text.class);
-        xmlHakker.setReducerClass(hadoop.job1.parse.WikiPageParseReducer.class);
+        xmlParser.setOutputKeyClass(Text.class);
+        xmlParser.setOutputValueClass(Text.class);
+        xmlParser.setReducerClass(hadoop.job1.parse.WikiPageParseReducer.class);
 
-        return xmlHakker.waitForCompletion(true);
+        return xmlParser.waitForCompletion(true);
     }
 
     private boolean runRankCalculation(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
@@ -131,27 +137,46 @@ public class Driver extends Configured implements Tool {
 
         return rankCalculator.waitForCompletion(true);
     }
+    
+    private boolean sortPageRank(String inputPath, String outputPath)
+			throws IOException, ClassNotFoundException, InterruptedException {
 
-    private boolean runRankOrdering(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
-        Configuration conf = new Configuration();
+		@SuppressWarnings("deprecation")
+		Job rankOrdering = new Job(getConf(), "sort-page-rank");
+		rankOrdering.setJarByClass(Driver.class);
 
-        Job rankOrdering = Job.getInstance(conf, "rank-ordering");
-        rankOrdering.setJarByClass(Driver.class);
+		rankOrdering.setMapOutputKeyClass(DoubleWritable.class);
+		rankOrdering.setMapOutputValueClass(Text.class);
+		rankOrdering.setOutputKeyClass(DoubleWritable.class);
+		rankOrdering.setOutputValueClass(Text.class);
+		
+		
+		FileInputFormat.setInputPaths(rankOrdering, new Path(inputPath));
+		FileOutputFormat.setOutputPath(rankOrdering, new Path(outputPath));
+		
+		rankOrdering.setSortComparatorClass(KeyComparator.class);
+		
+		rankOrdering.setMapperClass(SortRankMapper.class);
+		rankOrdering.setNumReduceTasks(1);
+		rankOrdering.setReducerClass(SortRankReducer.class);
+		
+		return rankOrdering.waitForCompletion(true);
+	}
+    
 
-        rankOrdering.setOutputKeyClass(FloatWritable.class);
-        rankOrdering.setOutputValueClass(Text.class);
-
-        rankOrdering.setMapperClass(RankingResultMapper.class);
-
-        FileInputFormat.setInputPaths(rankOrdering, new Path(inputPath));
-        FileOutputFormat.setOutputPath(rankOrdering, new Path(outputPath));
-
-        rankOrdering.setInputFormatClass(TextInputFormat.class);
-        rankOrdering.setOutputFormatClass(TextOutputFormat.class);
-
-        return rankOrdering.waitForCompletion(true);
+    public static class KeyComparator extends WritableComparator {
+        protected KeyComparator() {
+            super(DoubleWritable.class, true);
+        }
+        @Override
+        public int compare(WritableComparable w1, WritableComparable w2) {
+            DoubleWritable d1 = (DoubleWritable) w1;
+            DoubleWritable d2 = (DoubleWritable) w2;
+            int cmp = d1.compareTo(d2);
+            return cmp * -1; //reverse
+        }
     }
-
+    
     private String readFile(){
     	String size = "";
     	BufferedReader br = null;
