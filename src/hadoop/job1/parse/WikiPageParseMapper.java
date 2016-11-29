@@ -55,9 +55,6 @@ public class WikiPageParseMapper extends Mapper<LongWritable, Text, Text, Text> 
     private String getWikiPageFromLink(String aLink){
         if(isInvalidWikiLink(aLink)) return null;
         
-//        int start = aLink.startsWith("[[") ? 2 : 1;
-//        int endLink = aLink.indexOf("]");
-        
         int start = 0;
         int endLink = aLink.length();
 
@@ -79,13 +76,6 @@ public class WikiPageParseMapper extends Mapper<LongWritable, Text, Text, Text> 
         return aLink;
     }
     
-//    private String sweetify(String aLinkText) {
-//        if(aLinkText.contains("&amp;"))
-//            return aLinkText.replace("&amp;", "&");
-//
-//        return aLinkText;
-//    }
-
     private String[] parseTitleAndText(Text value) throws CharacterCodingException {
         String[] titleAndText = new String[2];
         

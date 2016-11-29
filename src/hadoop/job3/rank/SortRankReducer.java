@@ -15,7 +15,6 @@ public class SortRankReducer extends Reducer<DoubleWritable, Text, Text, DoubleW
 	  
 	  for (Text val: values){
 		  // output will be in this format <page page-rank>
-		  log.debug(val.toString()+"---"+key);
 		  context.write(val, key);
 	  }
 

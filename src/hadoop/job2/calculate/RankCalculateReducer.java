@@ -1,6 +1,5 @@
 package hadoop.job2.calculate;
 
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
