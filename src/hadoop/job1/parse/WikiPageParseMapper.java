@@ -29,6 +29,9 @@ public class WikiPageParseMapper extends Mapper<LongWritable, Text, Text, Text> 
         
         Text page = new Text(pageTitle.replace(' ', '_'));
 
+        //This part handles the red links
+        context.write(new Text(page), new Text("#"));
+
         //Parse the page body for valid links
         Matcher matcher = wikiLinksPattern.matcher(pageBody);
         
@@ -44,7 +47,10 @@ public class WikiPageParseMapper extends Mapper<LongWritable, Text, Text, Text> 
                 continue;
             
             // add valid otherPages to the map.
-            context.write(page, new Text(otherPage));
+            if(!otherPage.equalsIgnoreCase(page.toString())){
+            	context.write(new Text(otherPage), page);
+            }
+            
         }
     }
     

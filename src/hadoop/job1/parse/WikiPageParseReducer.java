@@ -15,11 +15,11 @@ public class WikiPageParseReducer extends Reducer<Text, Text, Text, Text> {
 
     @Override
     public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-        Configuration config = context.getConfiguration();
-        Integer corpusSize = Integer.parseInt(config.get("size"));
-        Double pageRank = 1.0 /corpusSize;
-    	String initialPageRank = pageRank+"\t";
-        String rankWithOutgoingLinks = initialPageRank;
+//        Configuration config = context.getConfiguration();
+//        Integer corpusSize = Integer.parseInt(config.get("size"));
+//        Double pageRank = 1.0 /corpusSize;
+//    	String initialPageRank = pageRank+"\t";
+//        String rankWithOutgoingLinks = initialPageRank;
         Set<String> linkSet = new HashSet<String>();
         
         for(Text val: values){
@@ -27,17 +27,30 @@ public class WikiPageParseReducer extends Reducer<Text, Text, Text, Text> {
         	linkSet.add(val.toString());
         }
 
-        boolean first = true;
-        Iterator<String> setIterator = linkSet.iterator();
-        while (setIterator.hasNext()) {
-        	
-        	String value = setIterator.next();
-            if(!first) rankWithOutgoingLinks += ",";
+        
+//        boolean first = true;
+//        Iterator<String> setIterator = linkSet.iterator();
+//        while (setIterator.hasNext()) {
+//        	
+//        	String value = setIterator.next();
+//            if(!first) rankWithOutgoingLinks += ",";
+//
+//            rankWithOutgoingLinks += value;
+//            first = false;
+//        }
 
-            rankWithOutgoingLinks += value;
-            first = false;
+        if(linkSet.contains("#")){
+            Iterator<String> i = linkSet.iterator();
+            while ( i.hasNext()){
+                String val = (String) i.next();
+                if ( !val.equals("#"))
+                    context.write(new Text(val), key);
+                else {
+                    context.write( key, new Text("#"));
+                }
+            }
         }
-
-        context.write(key, new Text(rankWithOutgoingLinks));
+        
+//        context.write(key, new Text(rankWithOutgoingLinks));
     }
 }
