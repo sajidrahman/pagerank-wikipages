@@ -1,11 +1,22 @@
 package hadoop;
 
-import hadoop.job0.preprocess.*;
+import hadoop.job0.preprocess.WikiCorpusSizeCalculatorMapper;
+import hadoop.job0.preprocess.WikiCorpusSizeCalculatorReducer;
 import hadoop.job1.parse.WikiPageParseMapper;
 import hadoop.job1.parse.WikiPageParseReducer;
 import hadoop.job1.parse.XmlInputFormat;
-import hadoop.job2.calculate.*;
-import hadoop.job3.rank.*;
+import hadoop.job2.creategraph.AdjacencyListMapper;
+import hadoop.job2.creategraph.AdjacencyListReducer;
+import hadoop.job3.calculate.RankCalculateMapper;
+import hadoop.job3.calculate.RankCalculateReducer;
+import hadoop.job4.rank.SortRankMapper;
+import hadoop.job4.rank.SortRankReducer;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -15,22 +26,12 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Partitioner;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 
 public class Driver extends Configured implements Tool {
 
@@ -43,19 +44,20 @@ public class Driver extends Configured implements Tool {
     @Override
     public int run(String[] args) throws Exception {
     	
-    	calculateCorpusSize(args[0], "wiki-corpus-size");
+    	calculateCorpusSize(args[0], "wiki/size");
     	String corpusSize = readFile();
     	
-        boolean isCompleted = runWikiPageParsing(args[0], args[1], corpusSize);
+        boolean isCompleted = runWikiPageParsing(args[0], "wiki/adjacencylist/stage1");
+        runAdjacencyListGenerator("wiki/adjacencylist/stage1", "wiki/ranking/iter00", corpusSize);
         if (!isCompleted) return 1;
 
         String lastResultPath = null;
 
-        for (int runs = 0; runs < 16; runs++) {
+        for (int runs = 0; runs < 8; runs++) {
             String inPath = "wiki/ranking/iter" + nf.format(runs);
             lastResultPath = "wiki/ranking/iter" + nf.format(runs + 1);
 
-            isCompleted = runRankCalculation(inPath, lastResultPath);
+            isCompleted = runRankCalculation(inPath, lastResultPath,corpusSize);
 
             if (!isCompleted) return 1;
         }
@@ -94,11 +96,11 @@ public class Driver extends Configured implements Tool {
     }
     
     
-    public boolean runWikiPageParsing(String inputPath, String outputPath, String size) throws IOException, ClassNotFoundException, InterruptedException {
+    public boolean runWikiPageParsing(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
         Configuration conf = new Configuration();
         conf.set(hadoop.job1.parse.XmlInputFormat.START_TAG_KEY, "<page>");
         conf.set(hadoop.job1.parse.XmlInputFormat.END_TAG_KEY, "</page>");
-        conf.set("size", size);
+        
         
         Job xmlParser = Job.getInstance(conf, "xml-parser");
         xmlParser.setJarByClass(Driver.class);
@@ -115,14 +117,15 @@ public class Driver extends Configured implements Tool {
 
         xmlParser.setOutputKeyClass(Text.class);
         xmlParser.setOutputValueClass(Text.class);
-        xmlParser.setReducerClass(hadoop.job1.parse.WikiPageParseReducer.class);
+        xmlParser.setReducerClass(WikiPageParseReducer.class);
 
         return xmlParser.waitForCompletion(true);
     }
 
-    private boolean runRankCalculation(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
+    private boolean runRankCalculation(String inputPath, String outputPath, String size) throws IOException, ClassNotFoundException, InterruptedException {
         Configuration conf = new Configuration();
-
+        conf.set("size", size);
+        
         Job rankCalculator = Job.getInstance(conf, "rank-calculator");
         rankCalculator.setJarByClass(Driver.class);
 
@@ -136,6 +139,25 @@ public class Driver extends Configured implements Tool {
         rankCalculator.setReducerClass(RankCalculateReducer.class);
 
         return rankCalculator.waitForCompletion(true);
+    }
+    
+    private boolean runAdjacencyListGenerator(String inputPath, String outputPath, String size) throws IOException, ClassNotFoundException, InterruptedException {
+        Configuration conf = new Configuration();
+        conf.set("size", size);
+
+        Job graphGenerator = Job.getInstance(conf, "adjacency-graph");
+        graphGenerator.setJarByClass(Driver.class);
+
+        graphGenerator.setOutputKeyClass(Text.class);
+        graphGenerator.setOutputValueClass(Text.class);
+
+        FileInputFormat.setInputPaths(graphGenerator, new Path(inputPath));
+        FileOutputFormat.setOutputPath(graphGenerator, new Path(outputPath));
+
+        graphGenerator.setMapperClass(AdjacencyListMapper.class);
+        graphGenerator.setReducerClass(AdjacencyListReducer.class);
+
+        return graphGenerator.waitForCompletion(true);
     }
     
     private boolean sortPageRank(String inputPath, String outputPath)
@@ -185,7 +207,7 @@ public class Driver extends Configured implements Tool {
 
 			String sCurrentLine;
 
-			br = new BufferedReader(new FileReader("wiki-corpus-size/part-r-00000"));
+			br = new BufferedReader(new FileReader("wiki/size/part-r-00000"));
 
 			while ((sCurrentLine = br.readLine()) != null) {
 				String[] temp = sCurrentLine.split("\\s");
@@ -204,4 +226,5 @@ public class Driver extends Configured implements Tool {
 		
 		return size;
     }
+    
 }
