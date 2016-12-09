@@ -16,7 +16,7 @@ public class RankCalculateReducer extends Reducer<Text, Text, Text, Text> {
 
       Configuration config = context.getConfiguration();
       Integer N = Integer.parseInt(config.get("size"));
-    	double d = 0.85;
+    	double d = 0.15;
     	boolean isSinkPage = false;
         double rankVote = 0.0;
         String links = "";
@@ -44,7 +44,7 @@ public class RankCalculateReducer extends Reducer<Text, Text, Text, Text> {
             }
         }
 
-        Double pageRank = (1-d)/N + d * rankVote ;
+        Double pageRank = d/N + (1-d) * rankVote ;
 
        if(isSinkPage){
     	   context.write(page, new Text(pageRank.toString()));
