@@ -9,6 +9,7 @@ import hadoop.job2.creategraph.AdjacencyListMapper;
 import hadoop.job2.creategraph.AdjacencyListReducer;
 import hadoop.job3.calculate.RankCalculateMapper;
 import hadoop.job3.calculate.RankCalculateReducer;
+import hadoop.job31.normalize.RankNormalizationMapper;
 import hadoop.job4.rank.SortRankMapper;
 import hadoop.job4.rank.SortRankReducer;
 
@@ -20,6 +21,7 @@ import java.text.NumberFormat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -52,17 +54,28 @@ public class Driver extends Configured implements Tool {
         if (!isCompleted) return 1;
 
         String lastResultPath = null;
-
+        String lastNormalizedResultPath = null;
+        boolean first = true;
+        String inPath = null;
         for (int runs = 0; runs < 8; runs++) {
-            String inPath = "wiki/ranking/iter" + nf.format(runs);
+        	if(first){
+        		 inPath = "wiki/ranking/iter" + nf.format(runs);
+        		 first = false;
+        	}
+        	else
+        		inPath = "wiki/ranking/normalized/iter" + nf.format(runs);
+
+            
             lastResultPath = "wiki/ranking/iter" + nf.format(runs + 1);
+            lastNormalizedResultPath = "wiki/ranking/normalized/iter" + nf.format(runs + 1);
 
             isCompleted = runRankCalculation(inPath, lastResultPath,corpusSize);
+            isCompleted = runNormalizer(lastResultPath, lastNormalizedResultPath);
 
             if (!isCompleted) return 1;
         }
         
-        isCompleted = sortPageRank(lastResultPath, "wiki/result");
+        isCompleted = sortPageRank(lastNormalizedResultPath, "wiki/result");
         
         System.out.println("Is completed: "+isCompleted);
         if (!isCompleted) return 1;
@@ -226,5 +239,34 @@ public class Driver extends Configured implements Tool {
 		
 		return size;
     }
+    
+	private boolean runNormalizer(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
+		Configuration conf = new Configuration();
+
+		conf.set("dfs.replication", "1");
+		conf.set("mapreduce.client.submit.file.replication", "1");
+
+		conf.set("job.inputfile.path", inputPath);
+
+		Job normalizer = Job.getInstance(conf, "rank-normalizer");
+		normalizer.setJarByClass(Driver.class);
+
+		normalizer.setOutputKeyClass(Text.class);
+		normalizer.setOutputValueClass(Text.class);
+
+		FileInputFormat.setInputPaths(normalizer, new Path(inputPath));
+		FileOutputFormat.setOutputPath(normalizer, new Path(outputPath));
+
+		normalizer.setMapperClass(RankNormalizationMapper.class);
+
+		FileSystem fs = FileSystem.get(conf);
+		/*Check if output path (args[1])exist or not*/
+		if(fs.exists(new Path(outputPath))){
+			/*If exist delete the output path*/
+			fs.delete(new Path(outputPath),true);
+		}
+
+		return normalizer.waitForCompletion(true);
+	}
     
 }
