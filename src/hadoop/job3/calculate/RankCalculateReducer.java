@@ -36,8 +36,8 @@ public class RankCalculateReducer extends Reducer<Text, Text, Text, Text> {
             else {
             // Find the pagerank and number of links for the given page
             String[] sections = pageStr.split("\\t");
-            double currentPageRank = Double.valueOf(sections[1]);
-            int outboundLinkCount = Integer.valueOf(sections[2]);
+            double currentPageRank = Double.valueOf(sections[0]);
+            int outboundLinkCount = Integer.valueOf(sections[1]);
  
             // Add the given pagerank to the running total for the other pages
             rankVote += currentPageRank / outboundLinkCount;

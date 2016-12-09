@@ -12,8 +12,6 @@ import java.util.regex.Pattern;
 
 
 public class WikiCorpusSizeCalculatorMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
-    
-//    private static final Pattern wikiLinksPattern = Pattern.compile("(?<=[\\[]{2}).+?(?=[\\]])");
 
     @Override
     public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -24,69 +22,18 @@ public class WikiCorpusSizeCalculatorMapper extends Mapper<LongWritable, Text, T
         String[] titleAndText = parseTitleAndText(value);
         
         String pageTitle = titleAndText[0];
-        String pageBody = titleAndText[1];
+        
         if(isInvalidPage(pageTitle))
             return;
         context.write(new Text("size"), new IntWritable(1) );
         
-//        Text page = new Text(pageTitle.replace(' ', '_'));
-//
-//        //Parse the page body for valid links
-//        Matcher matcher = wikiLinksPattern.matcher(pageBody);
-//        
-//        //Loop through the matched links in [CONTENT]
-//        while (matcher.find()) {
-//            String otherPage = matcher.group();
-//            //Filter only wiki pages.
-//            //- some have [[realPage|linkName]], some single [realPage]
-//            //- some link to files or external pages.
-//            //- some link to paragraphs into other pages.
-//            otherPage = getWikiPageFromLink(otherPage);
-//            if(otherPage == null || otherPage.isEmpty()) 
-//                continue;
-//            
-//            // add valid otherPages to the map.
-//            context.write(page, new Text(otherPage));
-//        }
     }
     
     private boolean isInvalidPage(String pageString) {
         return pageString.contains(":");
     }
 
-    private String getWikiPageFromLink(String aLink){
-        if(isInvalidWikiLink(aLink)) return null;
-        
-//        int start = aLink.startsWith("[[") ? 2 : 1;
-//        int endLink = aLink.indexOf("]");
-        
-        int start = 0;
-        int endLink = aLink.length();
 
-        int pipePosition = aLink.indexOf("|");
-        if(pipePosition > 0){
-            endLink = pipePosition;
-        }
-        
-        int part = aLink.indexOf("#");
-        if(part > 0){
-            endLink = part;
-        }
-        
-        aLink =  aLink.substring(start, endLink);
-        aLink = aLink.replaceAll("\\s", "_");
-        aLink = aLink.replaceAll(",", "");
-        aLink = (aLink.contains("&amp;"))? aLink.replace("&amp;", "&"): aLink;
-        
-        return aLink;
-    }
-    
-//    private String sweetify(String aLinkText) {
-//        if(aLinkText.contains("&amp;"))
-//            return aLinkText.replace("&amp;", "&");
-//
-//        return aLinkText;
-//    }
 
     private String[] parseTitleAndText(Text value) throws CharacterCodingException {
         String[] titleAndText = new String[2];
@@ -112,26 +59,4 @@ public class WikiCorpusSizeCalculatorMapper extends Mapper<LongWritable, Text, T
         return titleAndText;
     }
 
-    private boolean isInvalidWikiLink(String aLink) {
-        int minLength = 1;
-        int maxLength = 100;
-
-        
-        if( aLink.length() < minLength+2 || aLink.length() > maxLength) return true;
-        char firstChar = aLink.charAt(minLength);
-        
-        if( firstChar == '#') return true;
-        if( firstChar == ',') return true;
-        if( firstChar == '.') return true;
-        if( firstChar == '&') return true;
-        if( firstChar == '\'') return true;
-        if( firstChar == '-') return true;
-        if( firstChar == '{') return true;
-        
-        if( aLink.contains(":")) return true; // Matches: external links and translations links
-        if( aLink.contains(",")) return true; // Matches: external links and translations links
-        if((aLink.indexOf('&') > 0) && !(aLink.substring(aLink.indexOf('&')).startsWith("&amp;"))) return true;
-        
-        return false;
-    }
 }

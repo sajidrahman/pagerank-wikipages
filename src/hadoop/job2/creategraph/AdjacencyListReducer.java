@@ -20,14 +20,6 @@ public class AdjacencyListReducer extends Reducer<Text, Text, Text, Text> {
         StringBuilder temp = new StringBuilder();
         temp.append(pageRank+"\t");
         Iterator<Text> itr = values.iterator();
-
-        if ( key.toString().equals("#")){
-            while(itr.hasNext())
-            {
-                context.write(new Text(itr.next()), new Text(""));
-            }
-
-        }else{
         	
         	
             while(itr.hasNext())
@@ -41,8 +33,7 @@ public class AdjacencyListReducer extends Reducer<Text, Text, Text, Text> {
             if (temp.length() > 0)
                 temp.deleteCharAt(temp.length() - 1);
 
-            // emit source-page initial-pagerank list-of-linked-pages
+            // emit <source-page initial-pagerank list-of-linked-pages>
             context.write(key, new Text(temp.toString()));
-        }
     }
 }

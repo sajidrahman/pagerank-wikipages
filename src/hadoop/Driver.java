@@ -45,18 +45,24 @@ public class Driver extends Configured implements Tool {
 
     @Override
     public int run(String[] args) throws Exception {
+    	//job 0 : calculate total number of pages
+    	calculateTotalPages(args[0], "wiki/size");
+    	String totalPage = readFile();
     	
-    	calculateCorpusSize(args[0], "wiki/size");
-    	String corpusSize = readFile();
-    	
-        boolean isCompleted = runWikiPageParsing(args[0], "wiki/adjacencylist/stage1");
-        runAdjacencyListGenerator("wiki/adjacencylist/stage1", "wiki/ranking/iter00", corpusSize);
+    	//job 1: extract wiki pages and valid outgoing links from a page
+        boolean isCompleted = runWikiXMLParser(args[0], "wiki/adjacencylist/stage1");
+        
+        //job 2: remove red links and generate adjacency graph
+        isCompleted = runAdjacencyListGenerator("wiki/adjacencylist/stage1", "wiki/ranking/iter00", totalPage);
+        
         if (!isCompleted) return 1;
 
         String lastResultPath = null;
         String lastNormalizedResultPath = null;
         boolean first = true;
         String inPath = null;
+        
+        // job 3: iterative map reduce, calculate page rank
         for (int runs = 0; runs < 8; runs++) {
         	if(first){
         		 inPath = "wiki/ranking/iter" + nf.format(runs);
@@ -69,21 +75,22 @@ public class Driver extends Configured implements Tool {
             lastResultPath = "wiki/ranking/iter" + nf.format(runs + 1);
             lastNormalizedResultPath = "wiki/ranking/normalized/iter" + nf.format(runs + 1);
 
-            isCompleted = runRankCalculation(inPath, lastResultPath,corpusSize);
+            isCompleted = runRankCalculation(inPath, lastResultPath,totalPage);
+            // job 3.1: normalize page rank values
             isCompleted = runNormalizer(lastResultPath, lastNormalizedResultPath);
 
             if (!isCompleted) return 1;
         }
         
+        //job 4: rank page in the descending order of pagerank values
         isCompleted = sortPageRank(lastNormalizedResultPath, "wiki/result");
         
-        System.out.println("Is completed: "+isCompleted);
         if (!isCompleted) return 1;
         return 0;
     }
 
 
-    public boolean calculateCorpusSize(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
+    public boolean calculateTotalPages(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
         Configuration conf = new Configuration();
         conf.set(XmlInputFormat.START_TAG_KEY, "<page>");
         conf.set(XmlInputFormat.END_TAG_KEY, "</page>");
@@ -109,7 +116,7 @@ public class Driver extends Configured implements Tool {
     }
     
     
-    public boolean runWikiPageParsing(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
+    public boolean runWikiXMLParser(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
         Configuration conf = new Configuration();
         conf.set(hadoop.job1.parse.XmlInputFormat.START_TAG_KEY, "<page>");
         conf.set(hadoop.job1.parse.XmlInputFormat.END_TAG_KEY, "</page>");

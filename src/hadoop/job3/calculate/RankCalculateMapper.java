@@ -20,8 +20,8 @@ public class RankCalculateMapper extends Mapper<LongWritable, Text, Text, Text> 
     	// Gets the mapped page
         String mappedPage = sections[0];
         
-        // Gets the [thisPage]	[thisPagesRank]
-        String mappedPageStr = sections[0] + "\t" + sections[1] + "\t";
+        // Gets current	pagerank
+        String mappedPageStr = sections[1] + "\t";
         
         // Ignore if page contains no links
         if(sections.length < 3 || sections[2] == "")
