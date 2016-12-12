@@ -51,10 +51,10 @@ That is (out-linkA, source-pagerank, total-outlinks-of-sourcepage). The mapper a
 
 Now in Reducer(*RankCalculateReducer*) for each link A, we add all the rank votes from all the incoming links to that page and count the page rank of that page. Formula for the page rank is,
 PR(p1) = d/N + (1-d)*(PR(p2)/L(p2) + PR(p3)/L(p3) + ...) where
-d = damping factor
-PR(p1) = page rank of page p1
-N = total number of pages
-L(p2) = total number of ou-links on page p2
+        d = damping factor,
+        PR(p1) = page rank of page p1,
+        N = total number of pages and 
+        L(p2) = total number of out-links on page p2
 Once we are done with the page rank calculation, we re-construct the source-page with its outgoing links along with newly calculated page rank, i.e. emit (title new-rank out-links).
 
   - Job 3.1: Rank Normalization job
