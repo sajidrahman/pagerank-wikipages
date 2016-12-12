@@ -58,15 +58,15 @@ PR(p1) = d/N + (1-d)*(PR(p2)/L(p2) + PR(p3)/L(p3) + ...) where
 Once we are done with the page rank calculation, we re-construct the source-page with its outgoing links along with newly calculated page rank, i.e. emit (title new-rank out-links).
 
   - Job 3.1: Rank Normalization job
-  
-This job takes the output from job 3 as input. The setup method accumulates all the ranks and calculates normalization         factor, c = 1/summation-of-pageranks. The mapper multiplies c with the existing page rank and emits (title normalized-rank     out-links).
+  
+The mapper (**RankNormalizationMapper**)takes the output from job 3 as input. The setup method accumulates all the ranks and calculates normalization         factor, c = 1/summation-of-pageranks. The mapper multiplies c with the existing page rank and emits (title normalized-rank     out-links).
   
 - Job 4: Rank the pages in descending order of pagerank values 
-Input to mapper (*SortRankMapper*): (page, rank, outgoing-links)
+Input to mapper (**SortRankMapper**): (page, rank, outgoing-links)
 Output from mapper (rank, page)
  
-Double type ranks get sorted by *KeyComparator* class.
-Input to reducer (*SortRankReducer*): (rank, list-of-pages) 
+Double type ranks get sorted by **KeyComparator** class.
+Input to reducer (**SortRankReducer**): (rank, list-of-pages) 
 Output from reducer (page, rank)
 
 #Top 10 pages from larger wiki file(afwiki-20091002)
