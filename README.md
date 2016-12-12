@@ -70,16 +70,16 @@ Once we are done with the page rank calculation, we re-construct the source-page
  Output from reducer (page, rank)
 
 #Top 10 pages from larger wiki file(afwiki-20091002)
-Suid-Afrika	78.86761000000001
-Verenigde_State_van_Amerika	63.674209999999995
-Frankryk	54.69844
-Engels	40.67030999999999
-Duitsland	39.960660000000004
-Gregoriaanse_kalender	36.213654
-Verenigde_Koninkryk	35.006572
-Rome	34.458307
-Italië	34.262503
-Rooms-Katolieke_Kerk	30.55359
+1. Suid-Afrika	78.86761000000001
+2. Verenigde_State_van_Amerika	63.674209999999995
+3. Frankryk	54.69844
+4. Engels	40.67030999999999
+5. Duitsland	39.960660000000004
+6. Gregoriaanse_kalender	36.213654
+7. Verenigde_Koninkryk	35.006572
+8. Rome	34.458307
+9. Italië	34.262503
+10. Rooms-Katolieke_Kerk	30.55359
 
 #Challenging Part
 The most challenging part in this assignment was to generate the adjacency graph correctly, removing the red links.
