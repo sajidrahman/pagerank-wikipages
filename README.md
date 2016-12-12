@@ -82,6 +82,6 @@ Input to reducer (**SortRankReducer**): (rank, list-of-pages). Output from reduc
 #Challenging Part
 The most challenging part in this assignment was to generate the adjacency graph correctly, removing the red links.
 
- #References
+#References
  1. https://github.com/gsp8181/hadoop-wiki-pagerank - Using hadoop to calculate the internal PageRank of wikipedia articles.
  2. http://blog.xebia.com/wiki-pagerank-with-hadoop/ - Wiki PageRank With Hadoop
