@@ -47,13 +47,13 @@ public class Driver extends Configured implements Tool {
     public int run(String[] args) throws Exception {
     	//job 0 : calculate total number of pages
     	calculateTotalPages(args[0], "wiki/size");
-    	String totalPage = readFile();
+//    	String totalPage = readFile();
     	
     	//job 1: extract wiki pages and valid outgoing links from a page
         boolean isCompleted = runWikiXMLParser(args[0], "wiki/adjacencylist/stage1");
         
         //job 2: remove red links and generate adjacency graph
-        isCompleted = runAdjacencyListGenerator("wiki/adjacencylist/stage1", "wiki/ranking/iter00", totalPage);
+        isCompleted = runAdjacencyListGenerator("wiki/adjacencylist/stage1", "wiki/ranking/iter00");
         
         if (!isCompleted) return 1;
 
@@ -75,7 +75,7 @@ public class Driver extends Configured implements Tool {
             lastResultPath = "wiki/ranking/iter" + nf.format(runs + 1);
             lastNormalizedResultPath = "wiki/ranking/normalized/iter" + nf.format(runs + 1);
 
-            isCompleted = runRankCalculation(inPath, lastResultPath,totalPage);
+            isCompleted = runRankCalculation(inPath, lastResultPath);
             // job 3.1: normalize page rank values
             isCompleted = runNormalizer(lastResultPath, lastNormalizedResultPath);
 
@@ -94,6 +94,8 @@ public class Driver extends Configured implements Tool {
         Configuration conf = new Configuration();
         conf.set(XmlInputFormat.START_TAG_KEY, "<page>");
         conf.set(XmlInputFormat.END_TAG_KEY, "</page>");
+        conf.set("dfs.replication", "1");
+        conf.set("mapreduce.client.submit.file.replication", "1");
 
 
         Job corpusSize = Job.getInstance(conf, "corpus-size");
@@ -120,7 +122,9 @@ public class Driver extends Configured implements Tool {
         Configuration conf = new Configuration();
         conf.set(hadoop.job1.parse.XmlInputFormat.START_TAG_KEY, "<page>");
         conf.set(hadoop.job1.parse.XmlInputFormat.END_TAG_KEY, "</page>");
-        
+
+		conf.set("dfs.replication", "1");
+		conf.set("mapreduce.client.submit.file.replication", "1");
         
         Job xmlParser = Job.getInstance(conf, "xml-parser");
         xmlParser.setJarByClass(Driver.class);
@@ -142,9 +146,12 @@ public class Driver extends Configured implements Tool {
         return xmlParser.waitForCompletion(true);
     }
 
-    private boolean runRankCalculation(String inputPath, String outputPath, String size) throws IOException, ClassNotFoundException, InterruptedException {
+    private boolean runRankCalculation(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
         Configuration conf = new Configuration();
-        conf.set("size", size);
+        conf.set("corpus.size.path", "wiki/size/part-r-00000");
+
+		conf.set("dfs.replication", "1");
+		conf.set("mapreduce.client.submit.file.replication", "1");
         
         Job rankCalculator = Job.getInstance(conf, "rank-calculator");
         rankCalculator.setJarByClass(Driver.class);
@@ -161,9 +168,12 @@ public class Driver extends Configured implements Tool {
         return rankCalculator.waitForCompletion(true);
     }
     
-    private boolean runAdjacencyListGenerator(String inputPath, String outputPath, String size) throws IOException, ClassNotFoundException, InterruptedException {
+    private boolean runAdjacencyListGenerator(String inputPath, String outputPath) throws IOException, ClassNotFoundException, InterruptedException {
         Configuration conf = new Configuration();
-        conf.set("size", size);
+        conf.set("corpus.size.path", "wiki/size/part-r-00000");
+
+		conf.set("dfs.replication", "1");
+		conf.set("mapreduce.client.submit.file.replication", "1");
 
         Job graphGenerator = Job.getInstance(conf, "adjacency-graph");
         graphGenerator.setJarByClass(Driver.class);
@@ -182,6 +192,11 @@ public class Driver extends Configured implements Tool {
     
     private boolean sortPageRank(String inputPath, String outputPath)
 			throws IOException, ClassNotFoundException, InterruptedException {
+    	
+		Configuration conf = new Configuration();
+
+		conf.set("dfs.replication", "1");
+		conf.set("mapreduce.client.submit.file.replication", "1");
 
 		@SuppressWarnings("deprecation")
 		Job rankOrdering = new Job(getConf(), "sort-page-rank");
