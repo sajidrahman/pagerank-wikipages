@@ -85,3 +85,4 @@ The most challenging part in this assignment was to generate the adjacency graph
 #References
  1. https://github.com/gsp8181/hadoop-wiki-pagerank - Using hadoop to calculate the internal PageRank of wikipedia articles.
  2. http://blog.xebia.com/wiki-pagerank-with-hadoop/ - Wiki PageRank With Hadoop
+ 3. https://cise.ufl.edu/class/cis4930sp14ids/PageRank%20Project%20Q&A.pdf - PageRank project Q&A
