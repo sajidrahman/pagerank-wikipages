@@ -62,12 +62,10 @@ Once we are done with the page rank calculation, we re-construct the source-page
 The mapper (**RankNormalizationMapper**)takes the output from job 3 as input. The setup method accumulates all the ranks and calculates normalization         factor, c = 1/summation-of-pageranks. The mapper multiplies c with the existing page rank and emits (title normalized-rank     out-links).
   
 - Job 4: Rank the pages in descending order of pagerank values 
-Input to mapper (**SortRankMapper**): (page, rank, outgoing-links)
-Output from mapper (rank, page)
- 
+
+Input to mapper (**SortRankMapper**): (page, rank, outgoing-links). Output from mapper is (rank, page).
 Double type ranks get sorted by **KeyComparator** class.
-Input to reducer (**SortRankReducer**): (rank, list-of-pages) 
-Output from reducer (page, rank)
+Input to reducer (**SortRankReducer**): (rank, list-of-pages). Output from reducer is (page, rank).
 
 #Top 10 pages from larger wiki file(afwiki-20091002)
 1. Suid-Afrika	78.86761000000001
