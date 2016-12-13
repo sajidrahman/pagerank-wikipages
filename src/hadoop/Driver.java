@@ -198,8 +198,7 @@ public class Driver extends Configured implements Tool {
 		conf.set("dfs.replication", "1");
 		conf.set("mapreduce.client.submit.file.replication", "1");
 
-		@SuppressWarnings("deprecation")
-		Job rankOrdering = new Job(getConf(), "sort-page-rank");
+		Job rankOrdering = Job.getInstance(conf, "sort-page-rank");
 		rankOrdering.setJarByClass(Driver.class);
 
 		rankOrdering.setMapOutputKeyClass(DoubleWritable.class);
